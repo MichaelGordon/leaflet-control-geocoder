@@ -875,6 +875,107 @@
 	L.Control.Geocoder.photon = function(options) {
 		return new L.Control.Geocoder.Photon(options);
 	};
+	
+///////////////////////////
+
+
+
+
+///////////////////////////
+	
+	
+		L.Control.Geocoder.OrdnanceSurvey = L.Class.extend({
+		options: {
+			
+/* CURRENTLY TEST URL - MJG */			
+			
+			service_url: 'https://ordnance-eu-test.apigee.net/geocode/alpha'
+		},
+
+		initialize: function(key) {
+				this._key = key;
+		},
+
+		geocode: function(query, cb, context) {
+			var params = {
+				q: query,
+			};
+			if(this._key && this._key.length)
+			{
+				params['key'] = this._key
+			}
+			
+			var epsg27700 = "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.999601 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.060,0.1502,0.2470,0.8421,-20.4894 +datum=OSGB36 +units=m +no_defs";     
+
+
+			L.Control.Geocoder.getJSON(this.options.service_url, params, function(data) {
+					var results = [],
+							loc,
+							latLng,
+							latLngBounds;
+					if (data.results && data.results.length) {
+						for (var i = 0; i <= data.results.length - 1; i++) {
+							loc = data.results[i];
+							var coords = [loc.geometry.location.x,loc.geometry.location.y];
+							var projectedCoords = L.latLng(proj4(epsg27700, 'WGS84', coords));
+							latLng = L.latLng(projectedCoords.lng,projectedCoords.lat);
+							latLngBounds = L.latLngBounds(latLng, latLng);
+							results[i] = {
+									name: loc.formatted,
+									bbox: latLngBounds,
+									center: latLng
+							};
+						}
+					}
+
+					cb.call(context, results);
+			});
+		},
+		
+		suggest: function(query, cb, context) {
+			return this.geocode(query, cb, context);
+		},
+
+		reverse: function(location, scale, cb, context) {
+				var reverseCoords = [location.lng,location.lat];
+				var epsg27700 = "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.999601 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.060,0.1502,0.2470,0.8421,-20.4894 +datum=OSGB36 +units=m +no_defs";     
+				var projectedReverse = L.latLng(proj4('WGS84', epsg27700, reverseCoords));
+
+			var params = {
+				point: encodeURIComponent(projectedReverse.lat) + ',' + encodeURIComponent(projectedReverse.lng)
+			};
+			if(this._key && this._key.length)
+			{
+				params['key'] = this._key
+			}
+			L.Control.Geocoder.getJSON(this.options.service_url, params, function(data) {
+				var results = [],
+							loc,
+							latLng,
+							latLngBounds;
+					if (data.results && data.results.length) {
+						for (var i = 0; i <= data.results.length - 1; i++) {
+							loc = data.results[i];
+							var coords = [loc.geometry.location.x,loc.geometry.location.y];
+							var projectedCoords = L.latLng(proj4(epsg27700, 'WGS84', coords));
+							latLng = L.latLng(projectedCoords.lng,projectedCoords.lat);
+							latLngBounds = L.latLngBounds(latLng, latLng);
+							results[i] = {
+									name: loc.formatted,
+									bbox: latLngBounds,
+									center: latLng
+						};
+					}
+				}
+
+				cb.call(context, results);
+			});
+		}
+	});
+
+	L.Control.Geocoder.ordnancesurvey = function(key) {
+		return new L.Control.Geocoder.OrdnanceSurvey(key);
+	};
 
 	return L.Control.Geocoder;
 }));
